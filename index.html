@@ -1109,43 +1109,6 @@ bool inRegion(vec3 p) {
       if (s.rowSwatch && !s.coded) s.rowSwatch.style.setProperty('--c', plainSwatch(s));
     }
 
-    // The male sigmoid colon stops at the left side of the pelvis, short of the midline, and the model has no rectum.
-    // Bend its lower end across to the midline, in front of the sacrum, leaving the top joined to the descending colon.
-    // Works from the mesh's own bounds, so it behaves the same on the full and lite models.
-    function bendSigmoid(o) {
-      o.updateWorldMatrix(true, false);
-      const src = o.geometry.attributes.position, n = src.count;
-      const world = new THREE.Vector3(), pts = new Float32Array(n * 3);
-      let yMin = Infinity, yMax = -Infinity;
-      for (let i = 0; i < n; i++) {
-        world.set(src.getX(i), src.getY(i), src.getZ(i)).applyMatrix4(o.matrixWorld);
-        pts[i * 3] = world.x; pts[i * 3 + 1] = world.y; pts[i * 3 + 2] = world.z;
-        if (world.y < yMin) yMin = world.y;
-        if (world.y > yMax) yMax = world.y;
-      }
-      const h = yMax - yMin;
-      if (!(h > 0)) return;
-      // centre of the lowest tenth of the mesh = the free end
-      let cx = 0, cnt = 0;
-      for (let i = 0; i < n; i++) if (pts[i * 3 + 1] < yMin + 0.1 * h) { cx += pts[i * 3]; cnt++; }
-      if (!cnt) return;
-      const shift = -cx / cnt;                  // world x of the midline is 0
-      const top = yMin + 0.6 * h;               // above this the colon is untouched
-      const inv = o.matrixWorld.clone().invert();
-      const out = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) {
-        const t = Math.min(1, Math.max(0, (top - pts[i * 3 + 1]) / (top - yMin)));
-        const w = t * t * (3 - 2 * t);
-        world.set(pts[i * 3] + shift * w, pts[i * 3 + 1], pts[i * 3 + 2]).applyMatrix4(inv);
-        out[i * 3] = world.x; out[i * 3 + 1] = world.y; out[i * 3 + 2] = world.z;
-      }
-      const g = o.geometry.clone();
-      g.setAttribute('position', new THREE.BufferAttribute(out, 3));
-      g.computeVertexNormals();
-      g.computeBoundingBox(); g.computeBoundingSphere();
-      o.geometry = g;
-    }
-
     async function setSystem(s, on) {
       if (s.via) {
         const p = SYSTEMS.find(x => x.id === s.via);
@@ -1178,13 +1141,11 @@ bool inRegion(vec3 p) {
           s.group.traverse(n => { if (/^VH_F_/.test(n.name || '')) { n.userData.name = vhName(n.name); if (REPRO_IDS[n.name]) n.userData.onto = REPRO_IDS[n.name]; } });
           const kids = SYSTEMS.filter(c => c.via === s.id);
           const moves = [], drops = [];
-          s.group.updateMatrixWorld(true);
           s.group.traverse(o => {
             if (!o.isMesh) return;
             // ".j" meshes are baked label leader-lines from the Blender source, not anatomy
             if (/\.j(-mesh)?$/i.test(rawName(o))) { drops.push(o); return; }
             if (s.keep && !s.keep.includes(o.name)) { drops.push(o); return; }   // only the listed structures
-            if (s.id === 'visceral' && /^sigmoid[ _]colon$/i.test(o.name || '')) bendSigmoid(o);
             let owner = s;
             for (let n = o; kids.length && n && n !== s.group; n = n.parent) {
               const hit = kids.find(c => c.match.test(rawName(n)));
