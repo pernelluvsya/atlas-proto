@@ -400,7 +400,7 @@
         helper meshes and unused texture coordinates removed; a lighter copy for phones simplified to about half the
         triangles; landmark ownership data added. Colours and lighting are applied by this viewer. The modified models
         are shared under the same CC BY-SA 4.0 licence.</p>
-      <p>Female sacrum and coccyx, vagina and ligaments, female reproductive organs, breasts: HuBMAP Human Reference
+      <p>Vagina and ligaments, female reproductive organs, breasts: HuBMAP Human Reference
         Atlas 3D reference objects (Visible Human
         Female, National Library of Medicine), licensed CC BY 4.0. Positioned and renamed for this viewer.</p>
     </details>
@@ -1462,7 +1462,7 @@ bool inRegion(vec3 p) {
         if (!m) continue;
         const female = FEMALE_ONLY.test(m.name || '') || e.system.id === 'breasts';
         const male = MALE_ONLY.test(((m.name || '') + ' ' + ((m.userData && m.userData.name) || '')).toLowerCase()) || (e.system.id === 'visceral' && MALE_SIGMOID.test(m.name || ''));
-        const pelvicOff = e.system.id === 'skeletal' && isPelvicBone(m) && pelvisMode === 'female';
+        const pelvicOff = false;   // the male sacrum and coccyx stay in both modes: the female ones sit about 4 cm behind the muscles
         if (!(female || male || e.system.id === 'skeletal')) continue;
         if (!female && !male && !isPelvicBone(m)) continue;
         const hideSex = (pelvisMode === 'male' && female) || (pelvisMode === 'female' && male);
@@ -1473,7 +1473,7 @@ bool inRegion(vec3 p) {
     async function setPelvis(mode) {
       pelvisMode = mode;
       pelvisBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
-      for (const id of ['pelvis', 'femur']) {
+      for (const id of ['femur']) {   // the female sacrum ('pelvis') is no longer shown
         const fem = SYSTEMS.find(x => x.id === id);
         fem.input.checked = mode === 'female';
         await setSystem(fem, mode === 'female');
