@@ -1146,6 +1146,7 @@ bool inRegion(vec3 p) {
             // ".j" meshes are baked label leader-lines from the Blender source, not anatomy
             if (/\.j(-mesh)?$/i.test(rawName(o))) { drops.push(o); return; }
             if (s.keep && !s.keep.includes(o.name)) { drops.push(o); return; }   // only the listed structures
+            if (s.id === 'visceral' && /^sigmoid[ _]colon$/i.test(o.name || '')) { drops.push(o); return; }   // removed: it stopped short of the midline and the model has no rectum
             let owner = s;
             for (let n = o; kids.length && n && n !== s.group; n = n.parent) {
               const hit = kids.find(c => c.match.test(rawName(n)));
